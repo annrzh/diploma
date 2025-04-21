@@ -13,11 +13,42 @@ class _catManPageState extends State<catManPage> {
   final TextEditingController _nameController = TextEditingController();
   String _errorMessage = '';
   String _successMessage = '';
+  List<dynamic> _categories = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories(); // Загружаем категории при инициализации
+  }
+
+  // Функция для загрузки категорий с сервера
+  Future<void> _fetchCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://26.171.234.69:3001/api/categories'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _categories = jsonDecode(response.body);
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Ошибка загрузки категорий';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка подключения к серверу. Проверьте соединение.';
+      });
+    }
+  }
+
+  // Функция для добавления категории
   Future<void> _addCategory() async {
     final name = _nameController.text.trim();
 
-    // Очистка сообщений
     setState(() {
       _errorMessage = '';
       _successMessage = '';
@@ -41,6 +72,7 @@ class _catManPageState extends State<catManPage> {
         setState(() {
           _successMessage = 'Категория добавлена!';
           _nameController.clear();
+          _fetchCategories(); // Перезагружаем список категорий
         });
       } else {
         final responseData = jsonDecode(response.body);
@@ -63,6 +95,21 @@ class _catManPageState extends State<catManPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Таблица с категориями
+            Expanded(
+              child: ListView.builder(
+                itemCount: _categories.length,
+                itemBuilder: (context, index) {
+                  final category = _categories[index];
+                  return Card(
+                    child: ListTile(
+                      title: Text(category['name']),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Поле для ввода и кнопка добавления категории
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Название категории'),

@@ -13,7 +13,7 @@ class Admin extends StatelessWidget {
     final List<Map<String, dynamic>> buttons = [
       {'title': 'Управление товарами', 'route': ProdManPage()},
       {'title': 'Управление категориями', 'route': catManPage()},
-      {'title': 'Управление автомобилями', 'route': CarManPage()},
+      {'title': 'Управление автомобилями', 'route': carManPage()},
       {'title': 'Заказы', 'route': OrdersAdmPage()},
     ];
 
