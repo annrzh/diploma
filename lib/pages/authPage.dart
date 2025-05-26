@@ -34,7 +34,10 @@ class _authPageState extends State<authPage> {
 
     if (!isLogin) {
       // Регистрация
-      if (name.isEmpty || email.isEmpty || telephone.isEmpty || password.isEmpty) {
+      if (name.isEmpty ||
+          email.isEmpty ||
+          telephone.isEmpty ||
+          password.isEmpty) {
         setState(() {
           _errorMessage = 'Заполните все поля!';
         });
@@ -43,7 +46,8 @@ class _authPageState extends State<authPage> {
 
       try {
         final response = await http.post(
-          Uri.parse('http://26.171.234.69:3001/api/register'), // Используем IP вашего компьютера для подключения 
+          Uri.parse(
+              'http://26.171.234.69:3001/api/register'), // Используем IP вашего компьютера для подключения
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'name': name,
@@ -80,7 +84,8 @@ class _authPageState extends State<authPage> {
 
       try {
         final response = await http.post(
-          Uri.parse('http://26.171.234.69:3001/api/login'), // Используем IP вашего компьютера для подключения 
+          Uri.parse(
+              'http://26.171.234.69:3001/api/login'), // Используем IP вашего компьютера для подключения
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'email': email,
@@ -90,19 +95,23 @@ class _authPageState extends State<authPage> {
 
         if (response.statusCode == 200) {
           final responseData = jsonDecode(response.body);
-          // Сохраняем userId в SharedPreferences
+          // Сохраняем userId и флаг isLoggedIn в SharedPreferences
           SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', true); // <--- добавлено
           await prefs.setString('userId', responseData['userId'].toString());
 
           setState(() {
-            _successMessage = 'Добро пожаловать, пользователь ID: ${responseData['userId']}';
+            _successMessage =
+                'Добро пожаловать, пользователь ID: ${responseData['userId']}';
           });
 
           // Переход к личному кабинету
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => profilePage(userId: responseData['userId'].toString()), // Передаем userId на страницу профиля
+              builder: (context) => profilePage(
+                  userId: responseData['userId']
+                      .toString()), // Передаем userId на страницу профиля
             ),
           );
         } else {

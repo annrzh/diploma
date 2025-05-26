@@ -15,17 +15,20 @@ class _catManPageState extends State<catManPage> {
   String _successMessage = '';
   List<dynamic> _categories = [];
 
+  // Укажите здесь IP вашего компьютера или хоста, на котором работает сервер
+  final String _baseUrl = 'http://26.171.234.69:3001/api/categories';
+
   @override
   void initState() {
     super.initState();
-    _fetchCategories(); // Загружаем категории при инициализации
+    _fetchCategories();
   }
 
-  // Функция для загрузки категорий с сервера
+  // Функция загрузки категорий
   Future<void> _fetchCategories() async {
     try {
       final response = await http.get(
-        Uri.parse('http://26.171.234.69:3001/api/categories'),
+        Uri.parse(_baseUrl),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -40,15 +43,14 @@ class _catManPageState extends State<catManPage> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Ошибка подключения к серверу. Проверьте соединение.';
+        _errorMessage = 'Ошибка подключения к серверу. Проверьте IP и порт.';
       });
     }
   }
 
-  // Функция для добавления категории
+  // Функция добавления новой категории
   Future<void> _addCategory() async {
     final name = _nameController.text.trim();
-
     setState(() {
       _errorMessage = '';
       _successMessage = '';
@@ -63,7 +65,7 @@ class _catManPageState extends State<catManPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://26.171.234.69:3001/api/categories'), // Адрес сервера
+        Uri.parse(_baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'name': name}),
       );
@@ -72,8 +74,8 @@ class _catManPageState extends State<catManPage> {
         setState(() {
           _successMessage = 'Категория добавлена!';
           _nameController.clear();
-          _fetchCategories(); // Перезагружаем список категорий
         });
+        _fetchCategories();
       } else {
         final responseData = jsonDecode(response.body);
         setState(() {
@@ -82,9 +84,82 @@ class _catManPageState extends State<catManPage> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Ошибка подключения к серверу. Проверьте соединение.';
+        _errorMessage = 'Ошибка подключения к серверу.';
       });
     }
+  }
+
+  // Функция удаления категории
+  Future<void> _deleteCategory(int id) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/$id'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        _fetchCategories();
+      } else {
+        setState(() {
+          _errorMessage = 'Ошибка удаления категории';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Ошибка подключения при удалении';
+      });
+    }
+  }
+
+  // Функция редактирования категории
+  Future<void> _editCategory(int id, String currentName) async {
+    final TextEditingController editController =
+        TextEditingController(text: currentName);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Редактировать категорию'),
+        content: TextField(
+          controller: editController,
+          decoration: const InputDecoration(labelText: 'Новое название'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newName = editController.text.trim();
+              if (newName.isEmpty) return;
+
+              try {
+                final response = await http.put(
+                  Uri.parse('$_baseUrl/$id'),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode({'name': newName}),
+                );
+
+                if (response.statusCode == 200) {
+                  Navigator.of(context).pop();
+                  _fetchCategories();
+                } else {
+                  setState(() {
+                    _errorMessage = 'Ошибка обновления категории';
+                  });
+                }
+              } catch (e) {
+                setState(() {
+                  _errorMessage = 'Ошибка подключения при обновлении';
+                });
+              }
+            },
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -95,7 +170,6 @@ class _catManPageState extends State<catManPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Таблица с категориями
             Expanded(
               child: ListView.builder(
                 itemCount: _categories.length,
@@ -104,12 +178,24 @@ class _catManPageState extends State<catManPage> {
                   return Card(
                     child: ListTile(
                       title: Text(category['name']),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.black),
+                            onPressed: () => _editCategory(category['id'], category['name']),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.black),
+                            onPressed: () => _deleteCategory(category['id']),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
               ),
             ),
-            // Поле для ввода и кнопка добавления категории
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Название категории'),

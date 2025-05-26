@@ -17,16 +17,15 @@ class _carManPageState extends State<carManPage> {
   String _successMessage = '';
   List<dynamic> _marks = [];
   List<dynamic> _models = [];
-  int? _selectedMarkId; // Переменная для выбранной марки
+  int? _selectedMarkId;
 
   @override
   void initState() {
     super.initState();
-    _fetchMarks(); // Загружаем марки при инициализации
-    _fetchModels(); // Загружаем модели при инициализации
+    _fetchMarks();
+    _fetchModels();
   }
 
-  // Функция для загрузки марок с сервера
   Future<void> _fetchMarks() async {
     try {
       final response = await http.get(
@@ -50,7 +49,6 @@ class _carManPageState extends State<carManPage> {
     }
   }
 
-  // Функция для загрузки моделей с сервера
   Future<void> _fetchModels() async {
     try {
       final response = await http.get(
@@ -74,7 +72,6 @@ class _carManPageState extends State<carManPage> {
     }
   }
 
-  // Функция для удаления марки
   Future<void> _deleteMark(int id) async {
     final response = await http.delete(
       Uri.parse('http://26.171.234.69:3001/api/marks/$id'),
@@ -91,12 +88,11 @@ class _carManPageState extends State<carManPage> {
     }
   }
 
-  // Функция для редактирования марки
   Future<void> _editMark(int id, String currentName) async {
-    final TextEditingController _editController = TextEditingController(text: currentName);
+    final TextEditingController _editController =
+        TextEditingController(text: currentName);
     String newName = currentName;
 
-    // Открыть диалог для редактирования
     await showDialog(
       context: context,
       builder: (context) {
@@ -120,7 +116,7 @@ class _carManPageState extends State<carManPage> {
 
                 if (response.statusCode == 200) {
                   setState(() {
-                    _fetchMarks(); // Перезагружаем список марок
+                    _fetchMarks();
                   });
                   Navigator.pop(context);
                 } else {
@@ -137,7 +133,6 @@ class _carManPageState extends State<carManPage> {
     );
   }
 
-  // Функция для добавления марки
   Future<void> _addMark() async {
     final name = _markController.text.trim();
 
@@ -164,7 +159,7 @@ class _carManPageState extends State<carManPage> {
         setState(() {
           _successMessage = 'Марка добавлена!';
           _markController.clear();
-          _fetchMarks(); // Перезагружаем список марок
+          _fetchMarks();
         });
       } else {
         final responseData = jsonDecode(response.body);
@@ -179,7 +174,6 @@ class _carManPageState extends State<carManPage> {
     }
   }
 
-  // Функция для добавления модели
   Future<void> _addModel() async {
     final name = _modelController.text.trim();
     final yearText = _yearController.text.trim();
@@ -191,7 +185,8 @@ class _carManPageState extends State<carManPage> {
 
     if (name.isEmpty || yearText.isEmpty || _selectedMarkId == null) {
       setState(() {
-        _errorMessage = 'Введите название модели, год выпуска и выберите марку!';
+        _errorMessage =
+            'Введите название модели, год выпуска и выберите марку!';
       });
       return;
     }
@@ -204,14 +199,18 @@ class _carManPageState extends State<carManPage> {
       return;
     }
 
+    // Находим название марки по ID
+    final selectedMark = _marks.firstWhere((mark) => mark['id'] == _selectedMarkId);
+    final markName = selectedMark['name'];  // Получаем название марки
+
     try {
       final response = await http.post(
         Uri.parse('http://26.171.234.69:3001/api/models'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'name': name,
-          'year': year,
-          'markId': _selectedMarkId,
+          'year_of_release': year,
+          'mark_name': markName,  // Отправляем mark_name, а не mark_id
         }),
       );
 
@@ -222,16 +221,97 @@ class _carManPageState extends State<carManPage> {
           _yearController.clear();
           _selectedMarkId = null;
         });
-        _fetchModels(); // обновление списка моделей
+        _fetchModels(); // Обновляем список моделей
       } else {
         final responseData = jsonDecode(response.body);
         setState(() {
-          _errorMessage = responseData['message'] ?? 'Ошибка добавления модели.';
+          _errorMessage =
+              responseData['message'] ?? 'Ошибка добавления модели.';
         });
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'Ошибка подключения к серверу. Проверьте соединение.';
+      });
+    }
+  }
+
+  Future<void> _editModel(int id, String currentName, int currentYear, int currentMarkId) async {
+  final TextEditingController _editNameController = TextEditingController(text: currentName);
+  final TextEditingController _editYearController = TextEditingController(text: currentYear.toString());
+
+  await showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Редактировать модель'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _editNameController,
+              decoration: const InputDecoration(labelText: 'Название модели'),
+            ),
+            TextField(
+              controller: _editYearController,
+              decoration: const InputDecoration(labelText: 'Год выпуска'),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final newYear = int.tryParse(_editYearController.text);
+              if (newYear == null) {
+                setState(() {
+                  _errorMessage = 'Год должен быть числом!';
+                });
+                return;
+              }
+
+              final response = await http.put(
+                Uri.parse('http://26.171.234.69:3001/api/models/$id'),
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'name': _editNameController.text,
+                  'year_of_release': newYear,
+                  'mark_id': currentMarkId
+                }),
+              );
+
+              if (response.statusCode == 200) {
+                setState(() {
+                  _fetchModels();
+                });
+                Navigator.pop(context);
+              } else {
+                setState(() {
+                  _errorMessage = 'Ошибка обновления модели';
+                });
+              }
+            },
+            child: const Text('Сохранить'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
+  Future<void> _deleteModel(int id) async {
+    final response = await http.delete(
+      Uri.parse('http://26.171.234.69:3001/api/models/$id'),
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        _models = _models.where((model) => model['id'] != id).toList();
+      });
+    } else {
+      setState(() {
+        _errorMessage = 'Ошибка удаления модели';
       });
     }
   }
@@ -244,7 +324,6 @@ class _carManPageState extends State<carManPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Таблица с марками
             Expanded(
               child: ListView.builder(
                 itemCount: _marks.length,
@@ -275,7 +354,6 @@ class _carManPageState extends State<carManPage> {
                 },
               ),
             ),
-            // Поле для ввода и кнопка добавления марки
             TextField(
               controller: _markController,
               decoration: const InputDecoration(labelText: 'Название марки'),
@@ -285,7 +363,6 @@ class _carManPageState extends State<carManPage> {
               onPressed: _addMark,
               child: const Text('Добавить марку'),
             ),
-            // Таблица с моделями
             Expanded(
               child: ListView.builder(
                 itemCount: _models.length,
@@ -294,20 +371,20 @@ class _carManPageState extends State<carManPage> {
                   return Card(
                     child: ListTile(
                       title: Text(model['name']),
-                      subtitle: Text('Год выпуска: ${model['year']}'),
+                      subtitle: Text('Год выпуска: ${model['year_of_release']}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: Icon(Icons.edit),
                             onPressed: () {
-                              // Добавьте функцию для редактирования модели
+                              _editModel(model['id'], model['name'], model['year_of_release'], model['mark_id']);
                             },
                           ),
                           IconButton(
                             icon: Icon(Icons.delete),
                             onPressed: () {
-                              // Добавьте функцию для удаления модели
+                              _deleteModel(model['id']);
                             },
                           ),
                         ],
@@ -317,7 +394,6 @@ class _carManPageState extends State<carManPage> {
                 },
               ),
             ),
-            // Поля для ввода и кнопка добавления модели
             TextField(
               controller: _modelController,
               decoration: const InputDecoration(labelText: 'Название модели'),
@@ -325,40 +401,30 @@ class _carManPageState extends State<carManPage> {
             TextField(
               controller: _yearController,
               decoration: const InputDecoration(labelText: 'Год выпуска'),
+              keyboardType: TextInputType.number,
             ),
             DropdownButton<int>(
-              value: _selectedMarkId,
-              hint: Text('Выберите марку'),
-              onChanged: (int? newValue) {
-                setState(() {
-                  _selectedMarkId = newValue;
-                });
-              },
-              items: _marks.map<DropdownMenuItem<int>>((mark) {
+              value: _marks.any((mark) => mark['id'] == _selectedMarkId)
+                  ? _selectedMarkId
+                  : null,
+              hint: const Text('Выберите марку'),
+              items: _marks.map((mark) {
                 return DropdownMenuItem<int>(
                   value: mark['id'],
                   child: Text(mark['name']),
                 );
               }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedMarkId = value;
+                });
+              },
             ),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _addModel,
               child: const Text('Добавить модель'),
             ),
-            if (_errorMessage.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                _errorMessage,
-                style: TextStyle(color: Colors.red),
-              ),
-            ],
-            if (_successMessage.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                _successMessage,
-                style: TextStyle(color: Colors.green),
-              ),
-            ],
           ],
         ),
       ),
