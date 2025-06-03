@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'authPage.dart'; // Импортируем страницу авторизации
+import 'authPage.dart'; // Импорт страницы авторизации
 
 class profilePage extends StatelessWidget {
   final String userId;
 
   const profilePage({super.key, required this.userId});
 
-  // Метод для выхода из аккаунта
   Future<void> _logout(BuildContext context) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
-    await prefs.remove('userId'); // Удаляем userId при выходе
+    await prefs.remove('userId');
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const authPage(), // Переход на страницу авторизации
+        builder: (context) => const authPage(),
       ),
     );
   }
@@ -36,7 +35,7 @@ class profilePage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => _logout(context), // Выход из аккаунта
+              onPressed: () => _logout(context),
               child: const Text('Выйти'),
             ),
           ],

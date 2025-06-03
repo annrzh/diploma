@@ -66,114 +66,116 @@ class _ProdManPageState extends State<ProdManPage> {
     }
   }
 
- Future<void> _editProduct(Map<String, dynamic> product) async {
-  final nameController = TextEditingController(text: product['name']);
-  final articleController = TextEditingController(text: product['article']);
-  final costController = TextEditingController(text: product['product_cost']?.toString());
-  final weightController = TextEditingController(text: product['product_weight']?.toString());
-  final availability = product['availability'] ?? 'есть в наличии';
+  Future<void> _editProduct(Map<String, dynamic> product) async {
+    final nameController = TextEditingController(text: product['name']);
+    final articleController = TextEditingController(text: product['article']);
+    final costController =
+        TextEditingController(text: product['product_cost']?.toString());
+    final weightController =
+        TextEditingController(text: product['product_weight']?.toString());
+    final availability = product['availability'] ?? 'есть в наличии';
 
-  String selectedAvailability = availability;
+    String selectedAvailability = availability;
 
-  await showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Редактировать товар'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Название'),
-            ),
-            TextField(
-              controller: articleController,
-              decoration: const InputDecoration(labelText: 'Артикул'),
-            ),
-            TextField(
-              controller: costController,
-              decoration: const InputDecoration(labelText: 'Стоимость'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: weightController,
-              decoration: const InputDecoration(labelText: 'Вес'),
-              keyboardType: TextInputType.number,
-            ),
-            DropdownButtonFormField<String>(
-              value: selectedAvailability,
-              decoration: const InputDecoration(labelText: 'Наличие'),
-              items: const [
-                DropdownMenuItem(value: 'есть в наличии', child: Text('есть в наличии')),
-                DropdownMenuItem(value: 'нет в наличии', child: Text('нет в наличии')),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  selectedAvailability = value;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Редактировать товар'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Название'),
+              ),
+              TextField(
+                controller: articleController,
+                decoration: const InputDecoration(labelText: 'Артикул'),
+              ),
+              TextField(
+                controller: costController,
+                decoration: const InputDecoration(labelText: 'Стоимость'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: weightController,
+                decoration: const InputDecoration(labelText: 'Вес'),
+                keyboardType: TextInputType.number,
+              ),
+              DropdownButtonFormField<String>(
+                value: selectedAvailability,
+                decoration: const InputDecoration(labelText: 'Наличие'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'есть в наличии', child: Text('есть в наличии')),
+                  DropdownMenuItem(
+                      value: 'нет в наличии', child: Text('нет в наличии')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedAvailability = value;
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final updatedProduct = {
+                'name': nameController.text.trim(),
+                'article': articleController.text.trim(),
+                'product_cost': double.tryParse(costController.text) ?? 0,
+                'product_weight': double.tryParse(weightController.text) ?? 0,
+                'availability': selectedAvailability,
+              };
+
+              try {
+                final response = await http.put(
+                  Uri.parse('$_baseUrl/${product['id']}'),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode(updatedProduct),
+                );
+
+                if (response.statusCode == 200) {
+                  Navigator.of(context).pop();
+                  _fetchProducts();
+                } else {
+                  setState(() {
+                    _errorMessage = 'Ошибка обновления товара';
+                  });
                 }
-              },
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Отмена'),
-        ),
-        TextButton(
-          onPressed: () async {
-            final updatedProduct = {
-              'name': nameController.text.trim(),
-              'article': articleController.text.trim(),
-              'product_cost': double.tryParse(costController.text) ?? 0,
-              'product_weight': double.tryParse(weightController.text) ?? 0,
-              'availability': selectedAvailability,
-            };
-
-            try {
-              final response = await http.put(
-                Uri.parse('$_baseUrl/${product['id']}'),
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode(updatedProduct),
-              );
-
-              if (response.statusCode == 200) {
-                Navigator.of(context).pop();
-                _fetchProducts();
-              } else {
+              } catch (e) {
                 setState(() {
-                  _errorMessage = 'Ошибка обновления товара';
+                  _errorMessage = 'Ошибка подключения при обновлении';
                 });
               }
-            } catch (e) {
-              setState(() {
-                _errorMessage = 'Ошибка подключения при обновлении';
-              });
-            }
-          },
-          child: const Text('Сохранить'),
-        ),
-      ],
-    ),
-  );
-}
+            },
+            child: const Text('Сохранить'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _navigateToAddProduct() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const AddProdPage()),
-  );
-}
-  
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddProdPage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          // Зелёный заголовок с кнопкой назад и добавления
           Container(
             color: Colors.green,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -206,9 +208,18 @@ class _ProdManPageState extends State<ProdManPage> {
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('Название', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('Артикул', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('Действия', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(
+                    flex: 3,
+                    child: Text('Название',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(
+                    flex: 2,
+                    child: Text('Артикул',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(
+                    flex: 2,
+                    child: Text('Действия',
+                        style: TextStyle(fontWeight: FontWeight.bold))),
               ],
             ),
           ),
@@ -223,11 +234,16 @@ class _ProdManPageState extends State<ProdManPage> {
                     itemBuilder: (context, index) {
                       final product = _products[index];
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 6),
                         child: Row(
                           children: [
-                            Expanded(flex: 3, child: Text(product['name'] ?? 'Без названия')),
-                            Expanded(flex: 2, child: Text(product['article'] ?? '—')),
+                            Expanded(
+                                flex: 3,
+                                child: Text(product['name'] ?? 'Без названия')),
+                            Expanded(
+                                flex: 2,
+                                child: Text(product['article'] ?? '—')),
                             Expanded(
                               flex: 2,
                               child: Row(
@@ -238,7 +254,8 @@ class _ProdManPageState extends State<ProdManPage> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete),
-                                    onPressed: () => _deleteProduct(product['id']),
+                                    onPressed: () =>
+                                        _deleteProduct(product['id']),
                                   ),
                                 ],
                               ),

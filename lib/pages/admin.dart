@@ -5,8 +5,8 @@ import 'catManPage.dart';
 import 'carManPage.dart';
 import 'ordersAdmPage.dart';
 
-class Admin extends StatelessWidget {
-  const Admin({super.key});
+class admin extends StatelessWidget {
+  const admin({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +50,8 @@ class Admin extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => buttons[index]['route']),
+                    MaterialPageRoute(
+                        builder: (context) => buttons[index]['route']),
                   );
                 },
                 child: Text(

@@ -36,6 +36,7 @@ class _SearchPageState extends State<searchPage> {
         title: const Text('Поиск'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        automaticallyImplyLeading: false, // Убирает стрелку назад
       ),
       body: const Center(
         child: Text(
